@@ -69,7 +69,7 @@ FILE *mypopen(const char *command, const char *type) {
         }
 
 
-        (void) close(fd[1]);
+        //(void) close(fd[1]);
 
 
         (void) execl("/usr/bin/sh", "sh", "-c", command, (char *) NULL);
