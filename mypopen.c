@@ -14,15 +14,19 @@ FILE *mypopen(const char *command, const char *type) {
 
     FILE *fp = NULL;
     int fd[2];
-    int read_fd = 0;
-    int write_fd = 0, pid;
+    //int read_fd = 0;
+    //int write_fd = 0;
+    int pid;
+
+    if (type == NULL)
+        return NULL;
 
     if (type[1] != 0) {
         errno = E2BIG;
         return NULL;
     }
 
-    if (type[0] != 'w' || type[1]) {
+    if (type[0] != 'w' && type[1] != 'r') {
         errno = EINVAL;
         return NULL;
     }
@@ -33,12 +37,12 @@ FILE *mypopen(const char *command, const char *type) {
     }
 
     //split the pipe for read and write
-    read_fd = fd[0];
-    write_fd = fd[1];
+    //read_fd = fd[0];
+    //write_fd = fd[1];
 
     if ((pid = fork()) == -1) {
-        close(read_fd);
-        close(write_fd);
+        close(fd[0]);
+        close(fd[1]);
         return NULL;
     }
 
@@ -46,25 +50,23 @@ FILE *mypopen(const char *command, const char *type) {
         // we got a child here
 
         if (type[0] == 'r') {
-            (void) close(read_fd);
-            if (write_fd != STDOUT_FILENO) {
+            (void) close(fd[0]);
+            if (fd[1] != STDOUT_FILENO) {
 
-                if (dup2(write_fd, STDOUT_FILENO) == -1) {
-                    (void) close(write_fd);
+                if (dup2(fd[1], STDOUT_FILENO) == -1) {
+                    (void) close(fd[1]);
                     exit(EXIT_FAILURE);
                 }
-                (void)close(write_fd);
             }
 
-        } else{
-            (void) close(write_fd);
-            if (read_fd != STDIN_FILENO) {
+        } else {
+            (void) close(fd[1]);
+            if (fd[0] != STDIN_FILENO) {
 
-                if (dup2(read_fd, STDIN_FILENO) == -1) {
-                    (void) close(read_fd);
+                if (dup2(fd[0], STDIN_FILENO) == -1) {
+                    (void) close(fd[0]);
                     exit(EXIT_FAILURE);
                 }
-                (void)close(read_fd);
             }
         }
 
@@ -72,27 +74,26 @@ FILE *mypopen(const char *command, const char *type) {
         //(void) close(fd[1]);
 
 
-        (void) execl("/usr/bin/sh", "sh", "-c", command, (char *) NULL);
+        (void) execl("/bin/sh", "sh", "-c", command, (char *) NULL);
         exit(EXIT_FAILURE);
 
     } else {
 
         if (type[0] == 'r') {
-            (void) close(write_fd);
-            fp = fdopen(read_fd, type);
+            fp = fdopen(fd[0], type);
+            (void) close(fd[1]);
         } else {
-            close(read_fd);
-            fp = fdopen(write_fd, type);
+            fp = fdopen(fd[1], type);
+            (void) close(fd[0]);
         }
 
 
     }
 
-    if(fp == NULL){
-        (void)close(read_fd);
-        (void)close(write_fd);
+    if (fp == NULL) {
+        (void) close(fd[0]);
+        (void) close(fd[1]);
         return NULL;
-        if(pid == 0) exit(EXIT_FAILURE);
     }
 
 
@@ -102,6 +103,8 @@ FILE *mypopen(const char *command, const char *type) {
 
 /**\brief
  * \param stream
+ *
+ * Robert is working on it
  * */
 int mypclose(FILE *stream) {
     return pclose(stream);
