@@ -18,8 +18,10 @@ FILE *mypopen(const char *command, const char *type) {
     //int write_fd = 0;
     int pid;
 
-    if (type == NULL || type[1] != 0)
+    if (type == NULL || type[1] != 0){
+        errno = EINVAL;
         return NULL;
+    }
 
    /* if (type[1] != 0) {
         errno = E2BIG;
