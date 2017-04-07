@@ -18,13 +18,13 @@ FILE *mypopen(const char *command, const char *type) {
     //int write_fd = 0;
     int pid;
 
-    if (type == NULL)
+    if (type == NULL || type[1] != 0)
         return NULL;
 
-    if (type[1] != 0) {
+   /* if (type[1] != 0) {
         errno = E2BIG;
         return NULL;
-    }
+    }*/
 
     if (type[0] != 'w' && type[0] != 'r') {
         errno = EINVAL;
