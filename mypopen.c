@@ -26,7 +26,7 @@ FILE *mypopen(const char *command, const char *type) {
         return NULL;
     }
 
-    if (type[0] != 'w' && type[1] != 'r') {
+    if (type[0] != 'w' && type[0] != 'r') {
         errno = EINVAL;
         return NULL;
     }
