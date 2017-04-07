@@ -44,14 +44,15 @@ EXCLUDE_PATTERN=footrulewidth
 ##
 
 .PHONY: all
-all: myfind
+all: $(OBJECTS) /usr/local/lib/libpopentest.a
+	$(CC) $^ -o popentest
 
 mypopen: $(OBJECTS)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) $^
 
 .PHONY: clean
 clean:
-	$(RM) *.o *~ mypopen
+	$(RM) *.o *~ popentest
 
 .PHONY: distclean
 distclean: clean
