@@ -47,6 +47,8 @@ EXCLUDE_PATTERN=footrulewidth
 all: $(OBJECTS) /usr/local/lib/libpopentest.a
 	$(CC) $^ -o popentest
 
+## doesn't work yet, i have to fix something in here.
+
 mypopen: $(OBJECTS)
 	$(CC) $(CFLAGS) $^
 
