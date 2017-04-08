@@ -1,7 +1,3 @@
-
-#include <errno.h>
-#include <string.h>
-#include <stdlib.h>
 #include "mypopen.h"
 
 
@@ -10,23 +6,33 @@
  * \param type
  * */
 
+
+#define tpsr(a,b) (*type == 'r' ? (b) : (a))
+#define tpsw(a,b) (*type == 'w' ? (b) : (a))
+
+/** Robert use this to help you in your implementation
+ * */
+static FILE *fp_stream = NULL;
+static pid_t popen_pid = -1;
+
+
 FILE *mypopen(const char *command, const char *type) {
 
-    FILE *fp = NULL;
-    int fd[2];
+    int pipe_list[2];
     //int read_fd = 0;
     //int write_fd = 0;
-    int pid;
+    int parent_fd, child_fd;
 
-    if (type == NULL || type[1] != 0){
+
+    if (type == NULL || type[1] != 0) {
         errno = EINVAL;
         return NULL;
     }
 
-   /* if (type[1] != 0) {
-        errno = E2BIG;
-        return NULL;
-    }*/
+    /* if (type[1] != 0) {
+         errno = E2BIG;
+         return NULL;
+     }*/
 
     if (type[0] != 'w' && type[0] != 'r') {
         errno = EINVAL;
@@ -34,72 +40,91 @@ FILE *mypopen(const char *command, const char *type) {
     }
 
 
-    if (pipe(fd) == -1) {
+    if (pipe(pipe_list) == -1) {
         return NULL;  //errno will be set
     }
 
-    //split the pipe for read and write
-    //read_fd = fd[0];
-    //write_fd = fd[1];
+    child_fd = tpsr(STDIN_FILENO,STDOUT_FILENO);
+    parent_fd = tpsw(STDIN_FILENO,STDOUT_FILENO);
+    /*if (type[0] == 'r') {
+        child_fd = STDOUT_FILENO; //1 child woll be doing the writing
+        parent_fd = STDIN_FILENO; //0 parent read
+    } else {
+        child_fd = STDIN_FILENO; //0 child doing the reading
+        parent_fd = STDOUT_FILENO;//1 parent do the writing
+    }*/
 
-    if ((pid = fork()) == -1) {
-        close(fd[0]);
-        close(fd[1]);
+    //split the pipe for read and write
+    //read_fd = pipe_list[0];
+    //write_fd = pipe_list[1];
+
+    if ((popen_pid = fork()) == -1) {
+        close(pipe_list[0]);
+        close(pipe_list[1]);
         return NULL;
     }
 
-    if (pid == 0) {
+    if (popen_pid == 0) {
         // we got a child here
 
-        if (type[0] == 'r') {
-            (void) close(fd[0]);
-            if (fd[1] != STDOUT_FILENO) {
+        if (pipe_list[child_fd] != child_fd) {
 
-                if (dup2(fd[1], STDOUT_FILENO) == -1) {
-                    (void) close(fd[1]);
-                    exit(EXIT_FAILURE);
-                }
+            if (dup2(pipe_list[child_fd], child_fd) == -1) {
+                (void) close(pipe_list[child_fd]);
+                exit(EXIT_FAILURE);
             }
 
-        } else {
-            (void) close(fd[1]);
-            if (fd[0] != STDIN_FILENO) {
-
-                if (dup2(fd[0], STDIN_FILENO) == -1) {
-                    (void) close(fd[0]);
+            if (child_fd == STDOUT_FILENO) {
+                if (dup2(pipe_list[child_fd], STDERR_FILENO) == -1){
+                    (void) close(pipe_list[child_fd]);
                     exit(EXIT_FAILURE);
                 }
+
             }
+
+            (void) close(pipe_list[child_fd]);
         }
+        (void) pipe_list[parent_fd];
 
+        /* if (type[0] == 'r') {
+             (void) close(pipe_list[0]);
+             if (pipe_list[1] != STDOUT_FILENO) {
 
-        //(void) close(fd[1]);
+                 if (dup2(pipe_list[1], STDOUT_FILENO) == -1) {
+                     (void) close(pipe_list[1]);
+                     exit(EXIT_FAILURE);
+                 }
+             }
+
+         } else {
+             (void) close(pipe_list[1]);
+             if (pipe_list[0] != STDIN_FILENO) {
+
+                 if (dup2(pipe_list[0], STDIN_FILENO) == -1) {
+                     (void) close(pipe_list[0]);
+                     exit(EXIT_FAILURE);
+                 }
+             }
+         }*/
+
+        //(void) close(pipe_list[1]);
 
 
         (void) execl("/bin/sh", "sh", "-c", command, (char *) NULL);
-        exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE); //exit(127) required by man page
 
     } else {
 
-        if (type[0] == 'r') {
-            fp = fdopen(fd[0], type);
-            (void) close(fd[1]);
-        } else {
-            fp = fdopen(fd[1], type);
-            (void) close(fd[0]);
+        (void) close(pipe_list[child_fd]);
+        if ((fp_stream = fdopen(pipe_list[parent_fd], type)) == NULL) {
+            (void) close(pipe_list[parent_fd]);
+            return NULL;
         }
 
 
     }
 
-    if (fp == NULL) {
-        (void) close(fd[0]);
-        (void) close(fd[1]);
-        return NULL;
-    }
-
-
-    return fp;
+    return fp_stream;
 }
 
 

@@ -31,6 +31,9 @@
  */
 #include <stdio.h>
 #include <zconf.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
 
 
 
