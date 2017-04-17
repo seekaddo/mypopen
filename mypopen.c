@@ -6,21 +6,26 @@
  * \param type
  * */
 
-
+#if 0
 #define tpsr(a,b) (*type == 'r' ? (b) : (a))
 #define tpsw(a,b) (*type == 'w' ? (b) : (a))
+
+#else
+
+#define tpsrw(a,b) (*type == 'r' ? (b) : (a))
+
+#endif
 
 /** Robert use this to help you in your implementation
  * */
 static FILE *fp_stream = NULL;
 static pid_t popen_pid = -1;
+static const char * const shell_path = "/bin/sh";
 
 
 FILE *mypopen(const char *command, const char *type) {
 
     int pipe_list[2];
-    //int read_fd = 0;
-    //int write_fd = 0;
     int parent_fd, child_fd;
 
 
@@ -28,11 +33,6 @@ FILE *mypopen(const char *command, const char *type) {
         errno = EINVAL;
         return NULL;
     }
-
-    /* if (type[1] != 0) {
-         errno = E2BIG;
-         return NULL;
-     }*/
 
     if (type[0] != 'w' && type[0] != 'r') {
         errno = EINVAL;
@@ -43,48 +43,52 @@ FILE *mypopen(const char *command, const char *type) {
     if (pipe(pipe_list) == -1) {
         return NULL;  //errno will be set
     }
-
+#if 0
     child_fd = tpsr(STDIN_FILENO,STDOUT_FILENO);
     parent_fd = tpsw(STDIN_FILENO,STDOUT_FILENO);
-    /*if (type[0] == 'r') {
+
+    if (type[0] == 'r') {
         child_fd = STDOUT_FILENO; //1 child woll be doing the writing
         parent_fd = STDIN_FILENO; //0 parent read
     } else {
         child_fd = STDIN_FILENO; //0 child doing the reading
         parent_fd = STDOUT_FILENO;//1 parent do the writing
-    }*/
+    }
+#else
+    child_fd = tpsrw(STDIN_FILENO,STDOUT_FILENO);
+    parent_fd = !(tpsrw(STDIN_FILENO,STDOUT_FILENO));
+#endif
 
-    //split the pipe for read and write
-    //read_fd = pipe_list[0];
-    //write_fd = pipe_list[1];
 
     if ((popen_pid = fork()) == -1) {
+        const int err = errno;
         close(pipe_list[0]);
         close(pipe_list[1]);
+        errno = err;
         return NULL;
     }
 
     if (popen_pid == 0) {
         // we got a child here
-
+        (void) pipe_list[parent_fd];
         if (pipe_list[child_fd] != child_fd) {
 
             if (dup2(pipe_list[child_fd], child_fd) == -1) {
                 (void) close(pipe_list[child_fd]);
-                exit(EXIT_FAILURE);
+                _exit(EXIT_FAILURE);
             }
-
+#if 0
             if (child_fd == STDOUT_FILENO) {
                 if (dup2(pipe_list[child_fd], STDERR_FILENO) == -1){
                     (void) close(pipe_list[child_fd]);
-                    exit(EXIT_FAILURE);
+                    _exit(EXIT_FAILURE);
                 }
 
             }
+#endif
 
             (void) close(pipe_list[child_fd]);
         }
-        (void) pipe_list[parent_fd];
 
         /* if (type[0] == 'r') {
              (void) close(pipe_list[0]);
@@ -110,8 +114,8 @@ FILE *mypopen(const char *command, const char *type) {
         //(void) close(pipe_list[1]);
 
 
-        (void) execl("/bin/sh", "sh", "-c", command, (char *) NULL);
-        exit(EXIT_FAILURE); //exit(127) required by man page
+        (void) execl(shell_path, "sh", "-c", command, (char *) NULL);
+        _exit(EXIT_FAILURE); //exit(127) required by man page
 
     } else {
 
