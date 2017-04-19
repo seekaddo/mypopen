@@ -5,7 +5,7 @@
 #ifndef MYPOPEN_MYPOPEN_H
 #define MYPOPEN_MYPOPEN_H
 /**
- * @file myfind.c
+ * @file mypopen.h
  *
  * Beispiel 2
  *@brief This is a simple GNU-like popen and fclose Library
