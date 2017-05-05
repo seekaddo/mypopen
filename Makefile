@@ -3,8 +3,8 @@
 ## mypopen GNU-like popen Library Makefile
 ## Beispiel 2
 ##
-## @author Dennis Addo <ic16b026@technikum-wien.at> (tdxxx)
-## @author Robert Niedermayer <ic16b089@technikum-wien.at> (tdxxx)
+## @author Dennis Addo ic16b026@technikum-wien.at
+## @author Robert Niedermayer ic16b089@technikum-wien.at
 ## @date 2017/03/24
 ##
 ## @version 1.o $
@@ -21,12 +21,14 @@
 ##
 
 CC=gcc52
-CFLAGS=-DDEBUG -Wall -pedantic -Werror -Wextra -Wstrict-prototypes -fno-common -g -O3 -std=gnu11
+CFLAGS=-DDEBUG -Wall -pedantic -Werror -Wextra -Wstrict-prototypes \
+		-Wwrite-strings -fno-common -g -O3 -std=gnu11
 CP=cp
 CD=cd
 MV=mv
 GREP=grep
 DOXYGEN=doxygen
+PTEST=./popentest
 
 OBJECTS=mypopen.o
 
@@ -47,10 +49,14 @@ EXCLUDE_PATTERN=footrulewidth
 all: $(OBJECTS) /usr/local/lib/libpopentest.a
 	$(CC) $^ -o popentest
 
-## doesn't work yet, i have to fix something in here.
+pptest:
+	./popentest
 
-mypopen: $(OBJECTS)
-	$(CC) $(CFLAGS) $^
+
+#quick and clean running of the popentest (build + test)
+buildntest:
+	make all && $(PTEST)
+
 
 .PHONY: clean
 clean:
