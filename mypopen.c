@@ -19,7 +19,15 @@
  */
 
 
-
+/*\include
+ * -------------------------------------------------------------- includes --
+ */
+#include <zconf.h>
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include "mypopen.h"
 
 
@@ -41,7 +49,10 @@
  * bash sh path @c shell_path
  * */
 static FILE *fp_stream = NULL;
-static pid_t child_pid = -1;
+static pid_t child_pid = (pid_t) -1;
+// ### FB BP: Sowas besser als 
+//static const char shell_path[] = "/bin/sh";
+//            definieren.
 static const char *const shell_path = "/bin/sh";
 
 
@@ -74,16 +85,15 @@ FILE *mypopen(const char *command, const char *type) {
     int fileDis[2], parent_fd, child_fd;
 
 
-    if(child_pid != (pid_t) -1){
+    if (child_pid != (pid_t) -1) {
         errno = EAGAIN;
         return NULL;
     }
 
-    if (type == NULL || type[1]) {
+    if (type == NULL || type[1] != '\0') {
         errno = EINVAL;
         return NULL;
     }
-
 
 
     if (type[0] != 'w' && type[0] != 'r') {
@@ -100,13 +110,14 @@ FILE *mypopen(const char *command, const char *type) {
 #if 1
 
     child_fd = tpsr(STDIN_FILENO, STDOUT_FILENO);
-    parent_fd = !tpsr(STDIN_FILENO, STDOUT_FILENO);
-     /*
-      *       Expansion here
-      *             |
-      *             |
-      *             v
-      * */
+    parent_fd = tpsr(STDOUT_FILENO, STDIN_FILENO);
+
+    /*
+     *       Expansion here
+     *             |
+     *             |
+     *             v
+     * */
 
 #else
 
@@ -119,12 +130,12 @@ FILE *mypopen(const char *command, const char *type) {
 
         child_fd = STDIN_FILENO; /* 0i */
         parent_fd = STDOUT_FILENO;/*1  */
-    
+
 
 #endif
 
 
-    if ( ( child_pid = fork() ) == (pid_t) -1) {
+    if ((child_pid = fork()) == (pid_t) -1) {
         const int err = errno;
         close(fileDis[0]);
         close(fileDis[1]);
@@ -136,23 +147,23 @@ FILE *mypopen(const char *command, const char *type) {
 
         (void) close(fileDis[parent_fd]);
 
-            if (fileDis[child_fd] != child_fd) {
+        if (fileDis[child_fd] != child_fd) {
 
-                     if (dup2(fileDis[child_fd], child_fd) == -1) {
-                             (void) close(fileDis[child_fd]);
-                             exit(EXIT_FAILURE);
-                     }
-#if 0
-                    if (child_fd == STDOUT_FILENO) {   /*not necessary*/
-                        if (dup2(fileDis[child_fd], STDERR_FILENO) == -1){
-                            (void) close(fileDis[child_fd]);
-                             exit(EXIT_FAILURE);
-                        }
-
-                    }
-#endif
+            if (dup2(fileDis[child_fd], child_fd) == -1) {
                 (void) close(fileDis[child_fd]);
-             }
+                _exit(EXIT_FAILURE);
+            }
+#if 0
+            if (child_fd == STDOUT_FILENO) {   /*not necessary*/
+                if (dup2(fileDis[child_fd], STDERR_FILENO) == -1){
+                    (void) close(fileDis[child_fd]);
+                     exit(EXIT_FAILURE);
+                }
+
+            }
+#endif
+            (void) close(fileDis[child_fd]);
+        }
 
 
         (void) execl(shell_path, "sh", "-c", command, (char *) NULL);
@@ -161,11 +172,11 @@ FILE *mypopen(const char *command, const char *type) {
 
     } else {
 
-            (void) close(fileDis[child_fd]);
+        (void) close(fileDis[child_fd]);
 
         if ((fp_stream = fdopen(fileDis[parent_fd], type)) == NULL) {
             child_pid = -1;
-	    (void) close(fileDis[parent_fd]);
+            (void) close(fileDis[parent_fd]);
             return NULL;
         }
 
@@ -196,31 +207,39 @@ int mypclose(FILE *stream) {
     int status;
     pid_t wpid;
 
-    if(child_pid == (pid_t) -1 ){
+    if (child_pid == (pid_t) -1) {
         errno = ECHILD;
         return -1;
     }
 
 
-    if( fp_stream != stream ){/*|| fileno(stream) != fileno(fp_stream) ){*/
+    if (fp_stream != stream) {/*|| fileno(stream) != fileno(fp_stream) ){*/
         errno = EINVAL;
         return -1;
     }
 
 
-    if(fclose(stream) == EOF){/*errno is set by fclose*/
+    if (fclose(stream) == EOF) {/*errno is set by fclose*/
+        fp_stream = NULL;
+        child_pid = -1;
         return -1;
     }
 
 
+    do {
+        wpid = waitpid(child_pid, &status, 0);
 
-    do{
-        wpid = waitpid(child_pid,&status,0);
-
-    }while ((wpid == (pid_t)-1 ) && errno == EINTR);
+    } while ((wpid == (pid_t) -1) && errno == EINTR);
 
 
-    if(WIFEXITED(status)){
+    if (wpid == (pid_t)-1){
+        fp_stream = NULL;
+        child_pid = -1;
+        errno = ECHILD;
+        return -1;
+    }
+
+    if (WIFEXITED(status)) {
         child_pid = -1;
         fp_stream = NULL;
         return WEXITSTATUS(status);
@@ -229,6 +248,6 @@ int mypclose(FILE *stream) {
     child_pid = -1;
     fp_stream = NULL;
     errno = ECHILD;
-    
+
     return -1;
 }
