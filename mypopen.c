@@ -151,13 +151,15 @@ FILE *mypopen(const char *command, const char *type) {
 
             if (dup2(fileDis[child_fd], child_fd) == -1) {
                 (void) close(fileDis[child_fd]);
-                _exit(EXIT_FAILURE);
+                _Exit(EXIT_FAILURE);
+
+                
             }
 #if 0
             if (child_fd == STDOUT_FILENO) {   /*not necessary*/
                 if (dup2(fileDis[child_fd], STDERR_FILENO) == -1){
                     (void) close(fileDis[child_fd]);
-                     exit(EXIT_FAILURE);
+                     _exit(EXIT_FAILURE);
                 }
 
             }
@@ -167,7 +169,7 @@ FILE *mypopen(const char *command, const char *type) {
 
 
         (void) execl(shell_path, "sh", "-c", command, (char *) NULL);
-        _exit(127);
+        _Exit(127);
 
 
     } else {
