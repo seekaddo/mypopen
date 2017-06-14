@@ -45,7 +45,7 @@ EXCLUDE_PATTERN=footrulewidth
 ## --------------------------------------------------------------- targets --
 ##
 
-.PHONY: all
+.PHONY: all pptest buildntest
 all: $(OBJECTS) /usr/local/lib/libpopentest.a
 	$(CC) $^ -o popentest
 
@@ -62,13 +62,13 @@ buildntest:
 clean:
 	$(RM) *.o *~ popentest
 
-.PHONY: distclean
+.PHONY: doc distclean
 distclean: clean
 	$(RM) -r doc
 
 doc: html pdf
 
-.PHONY: html
+.PHONY: html pdf
 html:
 	$(DOXYGEN) doxygen.dcf
 
