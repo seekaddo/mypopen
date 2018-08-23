@@ -7,7 +7,6 @@
  *@brief This is a simple GNU-like popen and fclose Library
  *
  * @author Dennis Addo ic16b026
- * @author Robert Niedermaier ic16b089
  * @details More information about the project can be found here
  * @see URL:https://cis.technikum-wien.at/documents/bic/2/bes/semesterplan/lu/beispiel2.html
  *
