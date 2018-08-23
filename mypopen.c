@@ -5,7 +5,6 @@
  *@brief This is a simple GNU-like popen and fclose Library
  *
  * @author Dennis Addo ic16b026
- * @author Robert Niedermaier ic16b089
  * @date 24/03/2017
  *
  * @details More information about the project can be found here
