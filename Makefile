@@ -4,7 +4,6 @@
 ## Beispiel 2
 ##
 ## @author Dennis Addo ic16b026@technikum-wien.at
-## @author Robert Niedermayer ic16b089@technikum-wien.at
 ## @date 2017/03/24
 ##
 ## @version 1.o $
